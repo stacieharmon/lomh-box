@@ -6,7 +6,7 @@
 <title>Book</title>
 <link id="fontLink" rel="stylesheet" href="">
 <style>
-/* v18 2026-11-03: bottom nav added. Book product frame v7 (2026-11-01): options beside the image, image follows the page scroll (desktop),
+/* v19 2026-11-03: 'collaboration' opens an email to hello@lettersofmyheart.com. v18 2026-11-03: bottom nav added. Book product frame v7 (2026-11-01): options beside the image, image follows the page scroll (desktop),
    bulleted book note, 'About this book' below the buy button. Built on v6.
    Data-driven from PP_SiteSettings / PP_Books / PP_Editions; colors come from settings.theme
    with brand defaults below (LOMH brand system). Reusable as an HPG author template. */
@@ -636,7 +636,7 @@ html,body{-webkit-text-size-adjust:100%;text-size-adjust:100%}
       box.appendChild(c);});
     var songOn=!!(book.songTitle||book.songLine)&&part!=='listenOn';
     $('songPart').hidden=!songOn;txt('songHead',book.songHeading);$('songHead').hidden=!book.songHeading;txt('songTitle',book.songTitle);txt('songLine',book.songLine);$('songLine').hidden=!book.songLine;
-    (function(){var sl=$('songLine'),t=sl.textContent,i=t.indexOf('collaboration');if(i<0)return;sl.textContent='';sl.appendChild(document.createTextNode(t.slice(0,i)));var a=document.createElement('a');a.href='https://www.lettersofmyheart.com/contact';a.target='_top';a.textContent='collaboration';sl.appendChild(a);sl.appendChild(document.createTextNode(t.slice(i+13)));})(); // v14: 'collaboration' links to the contact page
+    (function(){var sl=$('songLine'),t=sl.textContent,i=t.indexOf('collaboration');if(i<0)return;sl.textContent='';sl.appendChild(document.createTextNode(t.slice(0,i)));var a=document.createElement('a');a.href='mailto:hello@lettersofmyheart.com?subject=LOMH%20Music%20%E2%80%94%20Collaboration%20%2F%20Licensing';a.target='_top';a.textContent='collaboration';sl.appendChild(a);sl.appendChild(document.createTextNode(t.slice(i+13)));})(); // v14/v19: 'collaboration' opens an email (Collaboration / Licensing)
     $('songArt').hidden=!book.songArtUrl;if(book.songArtUrl){$('songArt').src=book.songArtUrl;$('songArt').alt=book.songArtAlt||'';}
     var art=bk('songArtist');txt('songArtist',art||'');$('songArtist').hidden=!art;
     var sc=$('songCtl');sc.innerHTML='';var au=bk('songAudioUrl');sc.hidden=!au;if(songOn&&au)player(sc,$('pbar'),au,book.songTitle||'',secs(bk('songDurationSec')));
