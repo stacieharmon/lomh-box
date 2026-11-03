@@ -6,7 +6,7 @@
 <title>Book</title>
 <link id="fontLink" rel="stylesheet" href="">
 <style>
-/* Book product frame v7 (2026-11-01): options beside the image, image follows the page scroll (desktop),
+/* v18 2026-11-03: bottom nav added. Book product frame v7 (2026-11-01): options beside the image, image follows the page scroll (desktop),
    bulleted book note, 'About this book' below the buy button. Built on v6.
    Data-driven from PP_SiteSettings / PP_Books / PP_Editions; colors come from settings.theme
    with brand defaults below (LOMH brand system). Reusable as an HPG author template. */
@@ -338,7 +338,8 @@ html,body{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 .vnav .vp{justify-self:end}.vnav .vh{justify-self:center}.vnav .vx{justify-self:start}
 .vnav .vs{display:none}
 .vnav .vrow>span:empty{display:none}
-@media (max-width:767px){.vnav{padding:10px 18px 0}.vnav .vrow{padding-bottom:2px}}
+.vnav.vbot{padding:0 32px 28px}.vnav.vbot .vrow{border-bottom:0;border-top:1px solid #C9A55A;padding:6px 0 0}/* v18: bottom nav */
+@media (max-width:767px){.vnav{padding:10px 18px 0}.vnav .vrow{padding-bottom:2px}.vnav.vbot{padding:0 18px 22px}.vnav.vbot .vrow{padding:2px 0 0}}
 @media (max-width:599px){.vnav .vrow{display:flex;justify-content:center;gap:0 24px}.vnav .vl{display:none}.vnav .vs{display:inline}.vnav .vrow>span:empty{display:none}}
 </style>
 </head>
@@ -419,6 +420,7 @@ html,body{-webkit-text-size-adjust:100%;text-size-adjust:100%}
   <div class="lpart" id="streamPart" hidden><h2 id="streamHead"></h2><div class="slinks" id="slinks"></div></div>
 </section>
 <section class="related" id="related" hidden><h2 id="relHead"></h2><div class="flags" id="bFlags"></div><div class="rgrid" id="rgrid"></div></section>
+<nav class="vnav vbot" id="vnavB" aria-label="Volumes, bottom" hidden><div class="vrow"><span class="vp" id="vbPrev"></span><span class="vh" id="vbHome"></span><span class="vx" id="vbNext"></span></div></nav>
 
 <script>
 (function(){
@@ -470,11 +472,12 @@ html,body{-webkit-text-size-adjust:100%;text-size-adjust:100%}
     var l=document.createElement('span');l.className='vl';l.textContent=long;a.appendChild(l);
     var s=document.createElement('span');s.className='vs';s.textContent=short;a.appendChild(s);
     a.addEventListener('click',function(ev){if(inFrame){ev.preventDefault();send({type:'navigate',url:path});}});return a;}
-  function renderNav(){var n=$('vnav'),c=(part==='main'&&book)?NAV[book.bookId]:null;
-    ['vnPrev','vnHome','vnNext'].forEach(function(id){$(id).innerHTML='';});n.hidden=!c;if(!c)return;
-    if(c.prev)$('vnPrev').appendChild(navA(c.prev[0],c.prev[1],c.prev[2]));
-    $('vnHome').appendChild(navA('/','Home','Home'));
-    if(c.next)$('vnNext').appendChild(navA(c.next[0],c.next[1],c.next[2]));}
+  function renderNav(){var c=(part==='main'&&book)?NAV[book.bookId]:null; // v18: same nav at top and bottom
+    [['vnav','vnPrev','vnHome','vnNext'],['vnavB','vbPrev','vbHome','vbNext']].forEach(function(k){
+      var n=$(k[0]);[k[1],k[2],k[3]].forEach(function(id){$(id).innerHTML='';});n.hidden=!c;if(!c)return;
+      if(c.prev)$(k[1]).appendChild(navA(c.prev[0],c.prev[1],c.prev[2]));
+      $(k[2]).appendChild(navA('/','Home','Home'));
+      if(c.next)$(k[3]).appendChild(navA(c.next[0],c.next[1],c.next[2]));});}
   function render(payload,opts){
     opts=opts||{};
     P=payload;S=P.settings;L=S.labels;book=P.book;eds=P.editions||[];phase=P.phase||'pre';test=!!S.showPendingFlags;
