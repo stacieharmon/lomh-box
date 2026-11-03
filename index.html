@@ -1,0 +1,786 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Book</title>
+<link id="fontLink" rel="stylesheet" href="">
+<style>
+/* Book product frame v7 (2026-11-01): options beside the image, image follows the page scroll (desktop),
+   bulleted book note, 'About this book' below the buy button. Built on v6.
+   Data-driven from PP_SiteSettings / PP_Books / PP_Editions; colors come from settings.theme
+   with brand defaults below (LOMH brand system). Reusable as an HPG author template. */
+:root{--page:#F6EFE4;--text:#3A2A22;--title:#5E1020;--eyebrow:#6B3F1D;--button:#6B3F1D;--buttonHover:#4A2E1B;--buttonText:#F6EFE4;--line:#C9A55A;--panel:#E6DBCA;--card:#FFFFFF;--cardBorder:#D9CBB4;--radius:6px;
+ --selected:#5E1020;--selectedFill:#FAF4E8;--note:#FAF4E8;--imageBg:#FAF4E8;--display:'Cinzel',Georgia,serif;--body:'EB Garamond',Georgia,serif}
+*{box-sizing:border-box;margin:0;padding:0}
+[hidden]{display:none!important}
+html,body{background:var(--page)}
+/* Safety net only (2026-11-01 phone fix): the real cause was fixed in noOrphan() and .wrap>*{min-width:0}. */
+html,body{overflow:hidden}
+.note,.edition,.desc,.block{overflow-wrap:break-word}
+body{font-family:var(--body);color:var(--text);-webkit-font-smoothing:antialiased}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.draft{font-family:var(--display);font-size:11px;letter-spacing:.18em;text-transform:uppercase;text-align:center;padding:8px;border-bottom:1px solid var(--line);color:var(--eyebrow)}
+.date{font-family:var(--display);font-weight:400;font-size:13px;letter-spacing:.2em;text-transform:uppercase;color:var(--eyebrow);text-align:center;line-height:1.7}
+.topline{max-width:1120px;margin:0 auto;padding:28px 32px 0}
+.wrap{max-width:1120px;margin:0 auto;padding:24px 32px 40px;display:grid;grid-template-columns:1fr 1fr;gap:56px;align-items:start}
+.wrap{position:relative}
+.wrap>*{min-width:0}
+.photo{background:var(--panel);border-radius:var(--radius);padding:24px;position:sticky;top:24px;align-self:start;will-change:transform}
+/* In the Wix embed the PAGE scrolls, not this frame, so CSS sticky cannot work there; .follow switches to the JS follow (translateY). */
+html.follow .photo{position:relative;top:0;transition:transform .12s linear}
+.sent{position:absolute;left:0;width:1px;pointer-events:none;visibility:hidden}
+/* One fixed-aspect frame for every edition: same shape, same cream ground, book bottom-aligned. */
+.frame{aspect-ratio:1/1;width:100%;background:var(--imageBg);border-radius:4px;overflow:hidden;display:flex;align-items:flex-end;justify-content:center}
+.frame img{display:block;width:100%;height:100%;object-fit:contain;object-position:50% 100%;transition:opacity .25s}
+.thumbs{display:flex;gap:8px;margin-top:12px}.thumbs img{width:64px;height:64px;object-fit:contain;background:var(--imageBg);border-radius:4px;cursor:pointer;border:1px solid var(--cardBorder)}
+.eb,.label,.h3{font-family:var(--display);font-weight:400;font-size:13px;letter-spacing:.2em;text-transform:uppercase;color:var(--eyebrow)}
+.eb{margin:0 0 12px}
+h1{font-family:var(--body);font-weight:400;font-size:52px;line-height:1.05;color:var(--title);margin:0 0 16px;text-wrap:balance}
+.rule{width:72px;height:1px;background:var(--line);margin:0 0 24px}
+.hook{font-size:22px;font-weight:600;line-height:1.35;margin:0 0 16px;text-wrap:pretty}
+.desc p,.block p,.block li{font-size:19px;line-height:1.6;margin:0 0 16px;text-wrap:pretty}
+.desc p.close{font-style:italic}
+.block ul{padding-left:22px}.block li{margin-bottom:6px}
+.h3{margin:24px 0 10px}
+.btn2{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:10px 22px;background:var(--page);color:var(--eyebrow);border:1px solid var(--line);border-radius:var(--radius);font-family:var(--display);font-size:13px;letter-spacing:.14em;text-transform:uppercase;text-decoration:none;cursor:pointer}
+.btn2:hover{background:var(--selectedFill)}
+.samplesJump{margin:4px 0 8px}
+/* Book note: one soft cream band above the edition list. */
+/* Book note = schedule card under the buy button (Grace): cream box, 1px gold border, 8px corners, 20px padding. */
+.note{margin:16px 0 8px;padding:20px;background:var(--note);border:1px solid var(--line);border-radius:8px;font-size:17px;line-height:1.45;text-align:left;text-wrap:pretty}
+.note .nh{font-family:var(--display);font-weight:600;font-size:15px;letter-spacing:.14em;text-transform:uppercase;color:var(--selected);margin:0 0 10px}
+.note .srow{display:grid;grid-template-columns:160px 1fr;gap:4px 16px;padding:10px 0;align-items:baseline}
+.note .srow+.srow{border-top:1px solid var(--line)}
+.note .nh+.srow{padding-top:2px}
+.note .sl{font-family:var(--display);font-weight:500;font-size:13.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--selected)}
+.note .sv{font-family:var(--body);font-size:16px;line-height:1.45;color:var(--text)}
+.note .sv span{display:block}
+.label{margin:24px 0 10px}
+.note ul{margin:0;padding-left:20px}
+.note .nh .ns{display:inline-block;max-width:100%}
+.note li{margin:2px 0}
+.note p+p{margin-top:4px}
+/* About this book: the long description, below the buy area. */
+.about{margin-top:28px;border-top:1px solid var(--line);padding-top:4px}
+.about .h3{margin-top:20px}
+.ethumb{display:none}
+/* Edition rows (v4.9): dot, name, price. */
+.rows{display:grid;gap:8px}
+.row{display:flex;align-items:center;gap:12px;width:100%;min-height:44px;padding:10px 16px;background:var(--card);border:1px solid var(--cardBorder);border-radius:var(--radius);cursor:pointer;font-family:inherit;color:inherit;text-align:left;font-size:19px;line-height:1.25;transition:border-color .15s,background .15s}
+.row:hover{border-color:var(--line)}
+.row .dot{flex:0 0 auto;width:18px;height:18px;border-radius:50%;border:2px solid var(--eyebrow);display:inline-flex;align-items:center;justify-content:center}
+.row .name{flex:1 1 auto;font-weight:600}
+.row .tag{font-family:var(--display);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--eyebrow);border:1px solid var(--cardBorder);border-radius:3px;padding:2px 6px;white-space:nowrap}
+.row .price{font-weight:600;white-space:nowrap}
+.row[aria-checked="true"]{border:2px solid var(--selected);padding:9px 15px;background:var(--selectedFill)}
+.row[aria-checked="true"] .dot{border-color:var(--selected)}
+.row[aria-checked="true"] .dot::after{content:"";width:8px;height:8px;border-radius:50%;background:var(--selected)}
+.row.soldout .name,.row.soldout .price{opacity:.7}
+.row:focus-visible,.btn:focus-visible,.btn2:focus-visible,.qbtn:focus-visible,.slink:focus-visible{outline:2px solid var(--selected);outline-offset:3px}
+.edition{margin-top:20px;padding:20px 20px 8px;background:var(--card);border:1px solid var(--cardBorder);border-radius:var(--radius)}
+.edition .ename{font-size:22px;font-weight:600;margin-bottom:8px}
+.edition p{font-size:18px;line-height:1.55;margin:0 0 14px;text-wrap:pretty}
+.priceRow{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+.bigPrice{font-size:28px;font-weight:600}
+.pnote,.ship{font-size:16px;line-height:1.4}
+.sign{margin:4px 0 16px}
+.sign label{display:block;font-weight:600;font-size:18px;margin-bottom:6px}
+.sign input{width:100%;min-height:48px;padding:10px 14px;font-family:inherit;font-size:18px;color:var(--text);background:var(--page);border:1px solid var(--cardBorder);border-radius:var(--radius)}
+.sign input:focus{outline:2px solid var(--line);outline-offset:2px}
+.sign .meta{display:flex;justify-content:space-between;font-size:15px;margin-top:6px}
+.qty{display:flex;align-items:center;gap:12px;margin:8px 0 4px}
+.qty .ql{font-family:var(--display);font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--eyebrow)}
+.qbox{display:inline-flex;align-items:center;border:1px solid var(--line);border-radius:var(--radius);background:var(--page)}
+.qbtn{width:44px;height:44px;border:0;background:transparent;color:var(--eyebrow);font-size:22px;line-height:1;cursor:pointer;font-family:var(--body)}
+.qbtn[disabled]{opacity:.35;cursor:default}
+.qbox input{width:48px;height:44px;border:0;border-left:1px solid var(--cardBorder);border-right:1px solid var(--cardBorder);background:transparent;text-align:center;font-family:inherit;font-size:19px;color:var(--text);-moz-appearance:textfield}
+.qbox input::-webkit-outer-spin-button,.qbox input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+.qmsg{font-size:15px;min-height:1em}
+.buy{margin-top:16px}
+.btn{display:flex;align-items:center;justify-content:center;text-align:center;width:100%;min-height:56px;padding:14px 24px;background:var(--button);color:var(--buttonText);border:1px solid var(--line);border-radius:var(--radius);text-decoration:none;font-family:var(--display);font-weight:600;font-size:15px;letter-spacing:.14em;text-transform:uppercase;cursor:pointer;transition:background .2s}
+.btn:hover{background:var(--buttonHover)}
+.btn[aria-disabled="true"]{opacity:.55;cursor:default}
+.btn[aria-disabled="true"]:hover{background:var(--button)}
+.hint,.buy .hint{font-size:17px;line-height:1.5;margin-top:20px;text-align:center;text-wrap:pretty}
+.tbd{font-size:14px;margin-top:8px;text-align:center;color:var(--title)}
+.notice{font-size:15px;margin-top:10px;text-align:center;min-height:1em}
+.notice.err{color:var(--title)}
+.notify{margin-top:12px;text-align:center}
+.edition.notifyOnly{padding-bottom:20px}.edition.notifyOnly .notify{margin-top:0}
+.shipd{margin-top:14px;font-size:16px;line-height:1.5}
+.shipd summary{cursor:pointer;font-family:var(--display);font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--eyebrow);min-height:44px;display:flex;align-items:center;justify-content:space-between;gap:12px;list-style:none;border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:0 2px}
+.shipd summary::-webkit-details-marker{display:none}
+/* Clearly a toggle (Stacie's iPad, Nov 1): '+' closed, '\2212' open, whole 44px row is the tap target. */
+.shipd summary::after{content:'+';flex:0 0 auto;font-family:var(--body);font-size:26px;line-height:1;letter-spacing:0;color:var(--selected);transform:translateY(-3px)}
+.shipd[open] summary::after{content:'\2212'}
+.shipd[open] summary{border-bottom:0}
+.shipd summary:focus-visible{outline:2px solid var(--selected);outline-offset:3px}
+.shipd p{padding:4px 0 8px}
+.share{margin-top:16px;display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.share input{flex:1 1 220px;min-height:44px;padding:8px 12px;font-family:inherit;font-size:16px;color:var(--text);background:var(--page);border:1px solid var(--cardBorder);border-radius:var(--radius)}
+.share .smsg{flex-basis:100%;font-size:15px;min-height:1em}
+/* Share buttons (2026-11-01): brand cream buttons with gold border, brown Cinzel text, like .btn2. */
+.share{display:block;margin-top:24px;border-top:1px solid var(--line);padding-top:16px}
+.shl{font-family:var(--display);font-size:13px;letter-spacing:.2em;text-transform:uppercase;color:var(--eyebrow);margin:0 0 10px}
+.sbtns{display:flex;flex-wrap:wrap;gap:8px}
+.sbtn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:8px 14px;background:var(--page);color:var(--eyebrow);border:1px solid var(--line);border-radius:var(--radius);font-family:var(--display);font-size:12px;letter-spacing:.1em;text-transform:uppercase;text-decoration:none;cursor:pointer;white-space:nowrap;transition:background .2s,color .2s}
+.sbtn svg{width:16px;height:16px;flex:0 0 auto;fill:currentColor}
+@media (hover:hover){.sbtn:hover{background:var(--selectedFill);color:var(--title)}}
+.sbtn:focus-visible{outline:2px solid var(--selected);outline-offset:3px}
+.sbtn.snative,.sbtn.scopy.done{background:var(--button);color:var(--buttonText)}
+.share input{margin-top:10px;width:100%}
+.share .smsg{display:block;margin-top:6px}
+/* Listening section, below the edition details (v7: matches the live Home / Listen look). */
+.listen{max-width:1120px;margin:0 auto;padding:8px 32px 8px;--bar:#5B0F1F;--goldText:#86672A;--muted:#6E5646}
+.lpart{border-top:1px solid var(--line);padding-top:28px;margin-top:28px}
+.lpart h2{font-family:var(--display);font-weight:400;font-size:22px;letter-spacing:.12em;text-transform:uppercase;color:var(--title);margin-bottom:10px}
+.lpart .intro{font-size:19px;line-height:1.55;margin-bottom:16px;max-width:720px;text-wrap:pretty}
+/* Poem readings: "Hear the Heart's Voice" block */
+#samplesPart{text-align:center}
+#samplesPart h2{font-family:var(--body);font-size:52px;line-height:1.1;letter-spacing:0;text-transform:none;color:var(--title);margin-bottom:10px;text-wrap:balance}
+#samplesPart .intro{margin:0 auto 12px;max-width:640px;font-size:18px;text-wrap:balance}
+#samplesPart .tagl{font-style:italic;font-weight:600;font-size:18px;margin:0 auto 18px;text-wrap:balance}
+.samples{background:var(--panel);padding:22px 24px;display:grid;gap:18px;text-align:left}
+.sample{display:grid;grid-template-columns:50px minmax(0,1fr) auto;gap:0 16px;align-items:center;max-width:720px;width:100%;margin:0 auto}
+.sample .sth{width:50px;height:50px;object-fit:cover;display:block;border:1px solid var(--cardBorder)}
+.sample .pc{background:var(--page);padding:6px 12px 6px 12px;min-height:50px}
+.sample .st{font-size:17px;line-height:1.3}
+.sample .st .sa{color:var(--muted)}
+/* v7 (2026-11-03, Stacie): no reader name in the sample-poem list, on every screen size. */
+.sample .st .sa{display:none!important}
+.ctl{display:flex;align-items:center;gap:8px}
+.pbtn{flex:0 0 auto;width:44px;height:44px;margin:-6px 0 -6px -12px;border:0;background:transparent;color:var(--text);display:inline-flex;align-items:center;justify-content:center;cursor:pointer;padding:0}
+.pbtn svg{width:18px;height:18px;fill:currentColor}.pbtn .ip{display:none}.playing .pbtn .ip{display:block}.playing .pbtn .ipl{display:none}
+.pbtn:focus-visible,.seek:focus-visible,.ra:focus-visible,.buyS:focus-visible{outline:2px solid var(--selected);outline-offset:2px}
+.seek{-webkit-appearance:none;appearance:none;flex:1 1 auto;min-width:0;height:24px;background:transparent;cursor:pointer;--p:0%;--tr:#CFC6B8;--fill:#8A7F72;--th:#3A2A22}
+.seek::-webkit-slider-runnable-track{height:4px;border-radius:2px;background:linear-gradient(90deg,var(--fill) 0,var(--fill) var(--p),var(--tr) var(--p),var(--tr) 100%)}
+.seek::-webkit-slider-thumb{-webkit-appearance:none;width:12px;height:12px;margin-top:-4px;border-radius:50%;background:var(--th)}
+.seek::-moz-range-track{height:4px;border-radius:2px;background:var(--tr)}.seek::-moz-range-progress{height:4px;background:var(--fill)}
+.seek::-moz-range-thumb{width:12px;height:12px;border:0;border-radius:50%;background:var(--th)}
+.tm{flex:0 0 auto;font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+.sample .ra{display:inline-flex;align-items:center;min-height:44px;padding:0 4px;font-family:var(--body);font-size:17px;color:var(--selected);background:none;border:0;text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+/* Companion song: dark red bar (as on Listen), credit, Listen On */
+.pbar{display:grid;grid-template-columns:150px minmax(0,1fr) auto;gap:0 22px;align-items:center;background:var(--bar);color:#F6EFE4;padding:18px 22px;border-radius:2px}
+.pbar .bth{width:150px;height:150px;object-fit:cover;display:block;border:1px solid #C9A55A}
+.pbar .bar{font-size:15px;color:#E9DCC7;margin-bottom:4px}
+.pbar .btl{font-size:24px;line-height:1.2;color:#F6EFE4;margin-bottom:10px;text-wrap:balance}
+.pbar .ctl{gap:12px}
+.pbar .pbtn{color:#F6EFE4;margin:0 0 0 -10px}.pbar .pbtn svg{width:22px;height:22px}
+.pbar .seek{--tr:rgba(246,239,228,.3);--fill:#F6EFE4;--th:#F6EFE4}
+.pbar .tm{color:#E9DCC7;font-size:14px}
+.buyS{align-self:start;display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:8px 22px;background:#F6EFE4;color:var(--bar);border:1px solid #C9A55A;border-radius:8px;font-family:var(--display);font-weight:600;font-size:15px;letter-spacing:.1em;text-transform:uppercase;text-decoration:none;white-space:nowrap;cursor:pointer}
+.buyS:hover{background:#FAF4E8;box-shadow:0 0 0 2px #C9A55A}
+.scredit{font-size:18px;line-height:1.5;margin-top:12px;padding:0 22px;text-wrap:pretty}
+.scredit a{color:inherit;text-decoration:underline;text-decoration-color:#C9A55A;text-underline-offset:3px}
+#streamPart{text-align:center}
+/* 'Listen On' heading: same burgundy caps as 'Companion Song' (.lpart h2), Nov 1. */
+#streamPart h2{margin-bottom:16px}
+.lpart#streamPart{border-top:1px solid #C9A55A;margin-top:36px;padding-top:28px}
+.slinks{display:flex;flex-wrap:wrap;justify-content:center;gap:18px 40px}
+.slink{flex:0 0 calc((100% - 80px)/3);display:inline-flex;align-items:center;justify-content:center;min-height:48px;padding:10px 14px;border:1px solid #C9A55A;border-radius:8px;background:var(--button);color:var(--buttonText);text-decoration:none;font-family:var(--display);font-size:16px;letter-spacing:.06em;font-variant:small-caps;text-transform:none;text-align:center;transition:background .2s}
+/* All five buttons one brown; no primary/pressed look. Hover only on real pointers so a tap on iPhone/iPad doesn't leave one stuck darker. */
+@media (hover:hover){.slink:hover{background:var(--buttonHover)}}
+.slink:active{background:var(--button)}
+.related{max-width:1120px;margin:0 auto;padding:36px 32px 56px}
+.related::before{content:"";display:block;border-top:1px solid #C9A55A;margin-bottom:28px}
+.related h2{font-family:var(--display);font-weight:400;font-size:22px;letter-spacing:.12em;text-transform:uppercase;color:var(--title);margin-bottom:8px}
+.rgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:16px}
+.rcard{background:var(--card);border:1px solid var(--cardBorder);border-radius:var(--radius);padding:16px 18px}
+.rcard .rl{font-family:var(--display);font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--eyebrow)}
+.rcard .rt{font-size:21px;font-weight:600;margin:4px 0}
+.rcard .rth{font-size:16px;line-height:1.4;text-wrap:pretty}
+.rcard a,.rcard span.soon{display:inline-flex;align-items:center;min-height:44px;font-size:16px;color:var(--title)}
+.flag{display:inline-block;font-family:var(--body);font-size:14px;line-height:1.35;color:#7a3b00;background:#fff4d6;border:1px dashed #c98a00;border-radius:4px;padding:4px 8px;margin:6px 0 10px}
+.flags{margin:0 0 8px}
+.vollink{display:inline-flex;align-items:center;min-height:44px;font-size:18px;color:var(--title)}
+.loading{max-width:1120px;margin:0 auto;padding:80px 32px;text-align:center;font-size:18px}
+@media (min-width:768px) and (max-width:1023px){
+ .wrap{gap:32px;padding:20px 24px 32px}
+ h1{font-size:40px}
+}
+@media (max-width:767px){
+ .topline{padding:10px 18px 0}
+ .wrap{grid-template-columns:1fr;gap:20px;padding:12px 18px 32px}
+ /* Phone: image on top but capped (no vh: inside the embed vh is the frame height), not sticky. */
+ .photo,html.follow .photo{position:static;transform:none!important;padding:12px;max-width:240px;width:100%;margin:0 auto}
+ .sent{display:none}
+ /* Small copy of the chosen edition's image beside its name, so the change is visible right where you tap. */
+ .ethumb{display:block;flex:0 0 auto;width:56px;height:56px;object-fit:contain;object-position:50% 100%;background:var(--imageBg);border:1px solid var(--cardBorder);border-radius:4px}
+ .ehead{display:flex;align-items:center;gap:12px;margin-bottom:8px}.ehead .ename{margin-bottom:0}
+ .eb{font-size:11px;margin-bottom:10px}
+ h1{font-size:30px;margin-bottom:14px}
+ .hook{font-size:20px}
+ .desc p,.block p,.block li{font-size:18px}
+ .note{font-size:16px;padding:10px 14px;margin-top:20px}
+ .row{font-size:18px}
+ .btn{font-size:14px;letter-spacing:.08em;padding:14px 16px}
+ .listen{padding:0 18px 8px}
+ .note .srow{grid-template-columns:1fr;gap:2px}
+ /* Phone note card (Grace, Nov 1): quieter heading, bullets use the card width. */
+ .edition{padding:16px 14px 6px}.edition.notifyOnly{padding-bottom:16px}
+ .note{padding:12px 10px}
+ .note .nh{font-size:14px;letter-spacing:.06em;margin-bottom:8px}
+ .note ul{padding-left:16px}
+ #samplesPart h2{font-size:34px}
+ #samplesPart .intro,#samplesPart .tagl{font-size:17px}
+ .samples{padding:14px 10px;gap:16px}
+ .sample{grid-template-columns:44px minmax(0,1fr);gap:0 10px}
+ .sample .sth{width:44px;height:44px}
+ .sample .ra{grid-column:2;justify-self:start;padding:0}
+ .tm{font-size:12px}
+ /* Phone: poem title and reader on separate lines, no dash (Grace, Nov 1). */
+ .sample .st .sa{display:block}.sample .st .sd{display:none}
+ .pbar{grid-template-columns:72px minmax(0,1fr);gap:12px 12px;padding:14px}
+ .pbar .bth{width:72px;height:72px}
+ .pbar .btl{font-size:20px;margin-bottom:4px}
+ .pbar .binfo{display:contents}
+ .pbar .bth{grid-row:1/3}
+ .pbar .bar{grid-column:2;align-self:end;margin:0}
+ .pbar .btl{grid-column:2;align-self:start}
+ .pbar .ctl{grid-column:1/-1}
+ .buyS{grid-column:1/-1;width:100%;min-height:48px}
+ .scredit{font-size:17px;padding:0 14px}
+ .slinks{flex-direction:column;gap:12px}
+ .slink{flex:0 0 auto;width:100%}
+ .related{padding:28px 18px 40px}
+ .rgrid{grid-template-columns:1fr}
+}
+/* PHONE TEXT SIZES (2026-11-01, tablet-text): iPads in in-app browsers get Wix's 320px mobile layout
+   stretched about 2.2-2.5x, so every phone px here shows up 2.5x bigger. These sizes match the native Wix
+   mobile text on Home (body 16-17px, line-height 1.4-1.6, Cinzel buttons 14px, small caps labels 11-13px)
+   and the Home hero carousel (label 11px, title 26px, sub 17px, button 12px). Like the carousel, the
+   switch is the frame's own width (this media query measures the embed box, not the device).
+   Desktop rules above are unchanged. No copy changed. */
+html,body{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+@media (max-width:767px){
+ .date{font-size:11px;letter-spacing:.18em;line-height:1.5}
+ .label,.h3{font-size:11px;letter-spacing:.18em}
+ .label{margin:18px 0 8px}
+ h1{font-size:26px;line-height:1.1;margin-bottom:12px}
+ .rule{margin-bottom:16px}
+ .hook{font-size:17px;line-height:1.4;margin-bottom:12px}
+ .desc p,.block p,.block li{font-size:16px;line-height:1.5;margin-bottom:12px}
+ .block li{margin-bottom:4px}
+ .rows{gap:6px}
+ .row{font-size:16px;line-height:1.25;gap:10px;padding:8px 12px}
+ .row[aria-checked="true"]{padding:7px 11px}
+ .row .dot{width:16px;height:16px}
+ .row .tag{font-size:9.5px;padding:1px 5px}
+ .edition .ename{font-size:18px}
+ .ethumb{width:48px;height:48px}
+ .edition p{font-size:16px;line-height:1.5;margin-bottom:12px}
+ .bigPrice{font-size:22px}
+ .pnote,.ship{font-size:14px;line-height:1.4}
+ .sign label{font-size:16px}
+ .sign input{font-size:16px;min-height:44px}
+ .sign .meta,.qmsg,.notice,.share .smsg{font-size:14px}
+ .qty .ql{font-size:12px}
+ .qbtn{font-size:20px}
+ .qbox input{font-size:17px}
+ .btn{font-size:14px;min-height:50px;padding:12px 14px}
+ .btn2{font-size:12px}
+ .hint,.buy .hint{font-size:15px;line-height:1.45;margin-top:18px}
+ .tbd{font-size:13px}
+ .note{font-size:15px;line-height:1.45;margin-top:16px}
+ .note .nh{font-size:13px}
+ .note .sl{font-size:12px}
+ .note .sv{font-size:15px}
+ .shipd{font-size:15px;line-height:1.45}
+ .shipd summary{font-size:12px}
+ .shipd summary::after{font-size:22px}
+ .about{margin-top:22px}
+ .lpart{padding-top:22px;margin-top:22px}
+ .lpart#streamPart{margin-top:28px;padding-top:22px} .related::before{margin-bottom:22px}
+ .lpart h2,.related h2{font-size:18px}
+ .lpart .intro{font-size:16px;line-height:1.5}
+ #samplesPart h2{font-size:28px}
+ #samplesPart .intro,#samplesPart .tagl{font-size:16px;line-height:1.45}
+ .sample .st{font-size:16px}
+ .sample .ra{font-size:15px}
+ .pbar .bar{font-size:13px}
+ .pbar .btl{font-size:18px}
+ .pbar .tm{font-size:13px}
+ .buyS{font-size:13px}
+ .scredit{font-size:15px;line-height:1.45}
+ .slinks{gap:10px}
+ .slink{font-size:15px;min-height:44px;padding:8px 12px}
+ .rcard .rl{font-size:11px}
+ .rcard .rt{font-size:18px}
+ .rcard .rth{font-size:15px}
+ .rcard a,.rcard span.soon,.vollink{font-size:15px}
+ .share input{font-size:16px}
+ .shl{font-size:11px;letter-spacing:.18em}
+ .sbtns{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+ .sbtn{padding:8px 10px;font-size:11px}
+ .sbtn.snative,.sbtn.scopy{grid-column:1/-1}
+ /* v6 (2026-11-03, Stacie: spacing and button sizing on phones) */
+ .sbtns:has(#shareBtn:not([hidden])) .sbtn:not(.snative){display:none}
+ .share .smsg:empty{display:none}
+ .wrap{padding-bottom:12px}
+ .listen>.lpart:first-child{margin-top:12px}
+ .btn{font-size:13px;letter-spacing:.04em;padding:12px 8px}
+ /* v8 (2026-11-03, Stacie): phone poem rows match the Home page (bigger art flush with the card, bigger title and play, Read Along centered). */
+ .sample{grid-template-columns:72px minmax(0,1fr);gap:0}
+ .sample .sth{width:72px;height:72px}
+ .sample .pc{min-height:72px;display:flex;flex-direction:column;justify-content:center;padding:6px 12px}
+ .sample .st{font-size:20px}
+ .sample .pbtn svg{width:24px;height:24px}
+ .sample .ra{grid-column:1/-1;justify-self:center;font-size:17px}
+}
+/* Volume nav bar (v4, 2026-11-02): slim row at the very top of the box, above the release line.
+   Links come from book.bookId (one file for all seven pages); open in the top window. */
+.vnav{max-width:1120px;margin:0 auto;padding:14px 32px 0}
+.vnav .vrow{display:flex;justify-content:center;align-items:center;gap:0 40px;padding-bottom:6px;border-bottom:1px solid #C9A55A}
+.vnav a{display:inline-flex;align-items:center;min-height:44px;font-family:var(--body);font-size:16px;line-height:1.2;color:#5E1020;text-decoration:none;white-space:nowrap}
+.vnav a:hover{text-decoration:underline;text-underline-offset:3px}
+.vnav a:focus-visible{outline:2px solid var(--selected);outline-offset:3px}
+.vnav .vp{justify-self:end}.vnav .vh{justify-self:center}.vnav .vx{justify-self:start}
+.vnav .vs{display:none}
+.vnav .vrow>span:empty{display:none}
+@media (max-width:767px){.vnav{padding:10px 18px 0}.vnav .vrow{padding-bottom:2px}}
+@media (max-width:599px){.vnav .vrow{display:flex;justify-content:center;gap:0 24px}.vnav .vl{display:none}.vnav .vs{display:inline}.vnav .vrow>span:empty{display:none}}
+</style>
+</head>
+<body>
+<div class="draft" id="draft" hidden></div>
+<p class="loading" id="loading">&nbsp;</p>
+<nav class="vnav" id="vnav" aria-label="Volumes" hidden><div class="vrow"><span class="vp" id="vnPrev"></span><span class="vh" id="vnHome"></span><span class="vx" id="vnNext"></span></div></nav>
+<div class="topline" id="topline" hidden><p class="date" id="date"></p></div>
+<main class="wrap" id="main" hidden>
+  <div class="photo" id="photoCol"><div class="frame"><img id="photo" src="" alt="" width="1000" height="1000"></div><div class="thumbs" id="thumbs"></div></div>
+  <div class="info" id="info">
+    <p class="eb" id="eyebrow"></p>
+    <h1 id="title"></h1>
+    <div class="rule"></div>
+    <p class="hook" id="hook"></p>
+    <p class="label" id="chooseLabel"></p>
+    <div class="rows" id="choices" role="radiogroup" aria-labelledby="chooseLabel"></div>
+    <section class="edition" id="edition" aria-live="polite">
+      <div class="ehead" id="eHead"><img class="ethumb" id="eThumb" src="" alt="" aria-hidden="true" hidden><p class="ename" id="eName"></p></div>
+      <div class="flags" id="eFlags"></div>
+      <div class="priceRow" id="ePriceRow"><span class="bigPrice" id="ePrice"></span><span class="pnote" id="ePriceNote"></span></div>
+      <p id="eDesc"></p>
+      <div class="sign" id="sign" hidden>
+        <label for="signInput" id="signLabel"></label>
+        <input id="signInput" type="text" autocomplete="off">
+        <div class="meta"><span class="req" id="signReq"></span><span id="signCount"></span></div>
+      </div>
+      <p class="ship" id="eShip" hidden></p>
+      <div class="qty" id="qty" hidden>
+        <span class="ql" id="qtyLabel">Quantity</span>
+        <div class="qbox" role="group" aria-labelledby="qtyLabel">
+          <button type="button" class="qbtn" id="qMinus" aria-label="Decrease quantity">&minus;</button>
+          <input id="qInput" type="number" inputmode="numeric" min="1" max="10" value="1" aria-labelledby="qtyLabel">
+          <button type="button" class="qbtn" id="qPlus" aria-label="Increase quantity">+</button>
+        </div>
+        <span class="qmsg" id="qMsg" aria-live="polite"></span>
+      </div>
+      <div class="buy" id="buyWrap">
+        <a class="btn" id="buyBtn" href="#" role="button"></a>
+        <p class="hint" id="hint"></p>
+        <p class="tbd" id="tbd" hidden></p>
+        <p class="notice" id="notice" role="status"></p>
+      </div>
+      <div class="note" id="note" hidden></div>
+      <div class="notify" id="notifySlot" hidden><button type="button" class="btn2" id="notifyBtn"></button></div>
+    </section>
+    <details class="shipd" id="shipDetails" hidden><summary id="shipSum"></summary><p id="shipText"></p></details>
+    <section class="about" id="about" aria-labelledby="aboutHead">
+      <h2 class="h3" id="aboutHead"></h2>
+      <div class="desc" id="desc"></div>
+      <div id="volLinkWrap" hidden></div>
+      <div class="block" id="extra"></div>
+      <div class="samplesJump" id="samplesJumpWrap" hidden><a class="btn2" id="samplesJump" href="#listen"></a></div>
+    </section>
+    <div class="share" id="share" hidden>
+      <p class="shl" id="shareHead"></p>
+      <div class="sbtns">
+        <button type="button" class="sbtn snative" id="shareBtn" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l4 4h-3v8h-2V7H8l4-4zM5 11h3v2H7v6h10v-6h-1v-2h3v10H5V11z"/></svg><span id="shareBtnTxt"></span></button>
+        <a class="sbtn" id="shFb" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 8V6.5c0-.8.2-1.3 1.4-1.3H17V2.2C16.7 2.1 15.8 2 14.8 2 12.6 2 11 3.3 11 5.9V8H8.5v3.3H11V22h3V11.3h2.6L17 8h-3z"/></svg><span>Facebook</span></a>
+        <a class="sbtn" id="shX" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17.8 3h3.1l-6.8 7.7L22 21h-6.2l-4.9-6.3L5.3 21H2.2l7.2-8.3L1.8 3h6.4l4.4 5.8L17.8 3zm-1.1 16.2h1.7L7.4 4.7H5.6l11.1 14.5z"/></svg><span>X</span></a>
+        <a class="sbtn" id="shPin" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a10 10 0 0 0-3.6 19.3c-.1-.8-.2-2 0-2.9l1.2-5s-.3-.6-.3-1.5c0-1.4.8-2.4 1.8-2.4.8 0 1.2.6 1.2 1.4 0 .8-.5 2.1-.8 3.2-.2 1 .5 1.8 1.5 1.8 1.8 0 3.2-1.9 3.2-4.6 0-2.4-1.7-4.1-4.2-4.1-2.9 0-4.5 2.1-4.5 4.4 0 .9.3 1.8.8 2.3.1.1.1.2.1.3l-.3 1.2c0 .2-.2.2-.4.1-1.3-.6-2.1-2.5-2.1-4 0-3.3 2.4-6.3 6.9-6.3 3.6 0 6.4 2.6 6.4 6 0 3.6-2.3 6.5-5.4 6.5-1.1 0-2.1-.6-2.4-1.2l-.7 2.5c-.2.9-.9 2.1-1.3 2.8A10 10 0 1 0 12 2z"/></svg><span>Pinterest</span></a>
+        <a class="sbtn" id="shMail" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5h18v14H3V5zm2 2v.5l7 4.8 7-4.8V7H5zm14 2.9l-7 4.8-7-4.8V17h14V9.9z"/></svg><span>Email</span></a>
+        <button type="button" class="sbtn scopy" id="shCopy"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3h11v13h-2V5H8V3zM4 7h11v14H4V7zm2 2v10h7V9H6z"/></svg><span id="shCopyTxt">Copy link</span></button>
+      </div>
+      <input id="shareUrl" type="text" readonly hidden aria-label="Page link">
+      <span class="smsg" id="shareMsg" role="status" aria-live="polite"></span>
+    </div>
+  </div>
+</main>
+<section class="listen" id="listen" hidden>
+  <div class="lpart" id="samplesPart" hidden><h2 id="samplesHead"></h2><p class="intro" id="samplesIntro"></p><p class="tagl" id="samplesTag" hidden></p><div class="samples" id="samples"></div></div>
+  <div class="lpart" id="songPart" hidden><h2 id="songHead"></h2>
+    <div class="pbar" id="pbar"><img class="bth" id="songArt" src="" alt="">
+      <div class="binfo"><p class="bar" id="songArtist"></p><p class="btl" id="songTitle"></p>
+        <div class="ctl" id="songCtl"></div></div>
+      <a class="buyS" id="songBuy" hidden></a></div>
+    <p class="scredit" id="songLine"></p><p class="tbd" id="songTbd" hidden></p></div>
+  <div class="lpart" id="streamPart" hidden><h2 id="streamHead"></h2><div class="slinks" id="slinks"></div></div>
+</section>
+<section class="related" id="related" hidden><h2 id="relHead"></h2><div class="flags" id="bFlags"></div><div class="rgrid" id="rgrid"></div></section>
+
+<script>
+(function(){
+  'use strict';
+  var NS='lomh-pp';
+  var FLAG_TEXT={Q2:'dust jacket wording',Q5:'Amazon KDP links still to come',Q6:'six-volume strip and the Volume I link'};
+  var inFrame=window.parent&&window.parent!==window;
+  var parentOrigin='*';
+  try{if(document.referrer)parentOrigin=new URL(document.referrer).origin;}catch(e){}
+  function send(msg){msg.source=NS;if(inFrame){try{window.parent.postMessage(msg,parentOrigin);}catch(e){window.parent.postMessage(msg,'*');}}}
+
+  var P=null,S=null,L=null,book=null,eds=[],phase='pre',current=null,btns=[],busy=false,test=false,part='main',qty=1,comingSoon=false;
+  function $(id){return document.getElementById(id);}
+  // Keep dates together: "November 24, 2026", "Dec 10", "Nov 23" never split across lines.
+  var MONTHS='Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|June?|July?|Aug(?:ust)?|Sept?(?:ember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?';
+  var DATE_RE=new RegExp('\\b('+MONTHS+')\\.?[ \\u00a0]+(\\d{1,2})(?:(,)[ \\u00a0]+(\\d{4}))?\\b','g');
+  function keepDates(s){return String(s||'').replace(DATE_RE,function(m,mo,d,c,y){var dot=m.charAt(mo.length)==='.'?'.':'';return mo+dot+'\u00a0'+d+(y?','+'\u00a0'+y:'');});}
+  // Glue the last word to the one before it, unless that makes an unbreakable run longer than 18 characters
+  // (e.g. 'Releases\u00a0November\u00a024.' in a 15px letter-spaced heading was wider than a 320px phone).
+  function noOrphan(s){s=keepDates(s);var i=s.lastIndexOf(' ');if(i<=0)return s;var j=s.lastIndexOf(' ',i-1);if(s.length-(j+1)>18)return s;return s.slice(0,i)+'\u00a0'+s.slice(i+1);}
+  function money(n){return (n===null||n===undefined)?'':new Intl.NumberFormat(S.locale||'en-US',{style:'currency',currency:S.currency||'USD',minimumFractionDigits:(n%1?2:0)}).format(n);}
+  function isTbd(u){return !u||/^TBD/i.test(u);}
+  function txt(id,s){$(id).textContent=noOrphan(s);}
+  function el(tag,cls,text){var e=document.createElement(tag);if(cls)e.className=cls;if(text!==undefined)e.textContent=noOrphan(text);return e;}
+  function flagNodes(list){var f=document.createDocumentFragment();if(!test)return f;(list||[]).forEach(function(q){f.appendChild(el('span','flag','Pending Stacie: '+q+(FLAG_TEXT[q]?' ('+FLAG_TEXT[q]+')':'')));f.appendChild(document.createTextNode(' '));});return f;}
+  function navLink(a,url){a.href=url;a.target='_top';a.addEventListener('click',function(ev){if(inFrame){ev.preventDefault();send({type:'navigate',url:url});}});}
+  // Content height (documentElement.scrollHeight never reports less than the frame's own height).
+  function postHeight(){send({type:'height',px:Math.ceil(document.body.getBoundingClientRect().height),frameHeight:window.innerHeight,part:part});}
+  // Visible part of this frame in the parent page (cross-origin frames get the top-level viewport).
+  function visibleWindow(cb){
+    if(!inFrame||!window.IntersectionObserver){cb(null);return;}
+    var io=new IntersectionObserver(function(en){io.disconnect();var r=en[0];cb(r&&r.intersectionRatio>0?{top:r.intersectionRect.top,bottom:r.intersectionRect.bottom}:null);},{threshold:[0,0.01,0.1,0.25,0.5,0.75,1]});
+    io.observe(document.body);
+  }
+  function statusText(e){if(e.soldOut)return L.tagSoldOut;if(comingSoon||e.stage.status==='soon')return L.statusComingSoon;if(e.stage.status==='preorder')return L.statusPreorder;return L.statusAvailable;}
+
+  // ---- volume nav bar (v4): prev / Home / next, picked from book.bookId ----
+  var NAV_SITE='https://www.lettersofmyheart.com';
+  var NAV_PAGES={'lomh-vol1':'/volume-i','lomh-vol2':'/volume-ii','lomh-vol3':'/volume-iii','lomh-vol4':'/volume-iv','lomh-vol5':'/volume-v','lomh-vol6':'/volume-vi'};
+  var NAV={
+    'lomh-vol1':{prev:['/six-volume-collection','\u2039 The Complete Set','\u2039 Complete Set'],next:['/volume-ii','Next Volume \u203a','Next \u203a']},
+    'lomh-vol2':{prev:['/volume-i','\u2039 Previous Volume','\u2039 Previous'],next:['/volume-iii','Next Volume \u203a','Next \u203a']},
+    'lomh-vol3':{prev:['/volume-ii','\u2039 Previous Volume','\u2039 Previous'],next:['/volume-iv','Next Volume \u203a','Next \u203a']},
+    'lomh-vol4':{prev:['/volume-iii','\u2039 Previous Volume','\u2039 Previous'],next:['/volume-v','Next Volume \u203a','Next \u203a']},
+    'lomh-vol5':{prev:['/volume-iv','\u2039 Previous Volume','\u2039 Previous'],next:['/volume-vi','Next Volume \u203a','Next \u203a']},
+    'lomh-vol6':{prev:['/volume-v','\u2039 Previous Volume','\u2039 Previous'],next:['/six-volume-collection','The Complete Set \u203a','Complete Set \u203a']},
+    'lomh-set6':{prev:['/volume-vi','\u2039 Volume VI','\u2039 Volume VI'],next:['/volume-i','Volume I \u203a','Volume I \u203a']}};
+  function navA(path,long,short){var a=document.createElement('a');a.href=NAV_SITE+path;a.target='_top';
+    var l=document.createElement('span');l.className='vl';l.textContent=long;a.appendChild(l);
+    var s=document.createElement('span');s.className='vs';s.textContent=short;a.appendChild(s);
+    a.addEventListener('click',function(ev){if(inFrame){ev.preventDefault();send({type:'navigate',url:path});}});return a;}
+  function renderNav(){var n=$('vnav'),c=(part==='main'&&book)?NAV[book.bookId]:null;
+    ['vnPrev','vnHome','vnNext'].forEach(function(id){$(id).innerHTML='';});n.hidden=!c;if(!c)return;
+    if(c.prev)$('vnPrev').appendChild(navA(c.prev[0],c.prev[1],c.prev[2]));
+    $('vnHome').appendChild(navA('/','Home','Home'));
+    if(c.next)$('vnNext').appendChild(navA(c.next[0],c.next[1],c.next[2]));}
+  function render(payload,opts){
+    opts=opts||{};
+    P=payload;S=P.settings;L=S.labels;book=P.book;eds=P.editions||[];phase=P.phase||'pre';test=!!S.showPendingFlags;
+    part=opts.part||'main';comingSoon=book.bookState==='comingSoon';
+    var T=S.theme||{},root=document.documentElement.style;
+    var vars={page:T.colorPage,text:T.colorText,title:T.colorHeading||T.colorTitle,eyebrow:T.colorEyebrow,button:T.colorButton,buttonHover:T.colorButtonHover,buttonText:T.colorButtonText,line:T.colorLine,panel:T.colorPanel,card:T.colorCard,cardBorder:T.colorCardBorder,radius:T.radius,display:T.fontDisplay,body:T.fontBody,
+      selected:T.colorSelected,selectedFill:T.colorSelectedFill,note:T.colorNote,imageBg:T.colorImageBg};
+    Object.keys(vars).forEach(function(k){if(vars[k])root.setProperty('--'+k,vars[k]);});
+    if(T.fontHref&&!$('fontLink').getAttribute('href'))$('fontLink').href=T.fontHref;
+    document.title=book.seoTitle||book.title;
+    $('loading').hidden=true;
+    renderNav();
+    if(part==='listenOn'){ // second embed under the native music player: only the "Listen On" links
+      $('draft').hidden=true;$('topline').hidden=true;$('main').hidden=true;$('related').hidden=true;
+      renderListen(true);setTimeout(postHeight,200);return;
+    }
+    $('draft').hidden=!test;$('draft').textContent=S.draftBannerText||'';
+    $('main').hidden=false;
+    txt('date',book.releaseText);$('topline').hidden=!book.releaseText;
+    txt('eyebrow',book.eyebrow);txt('title',book.title);txt('hook',book.hook);txt('chooseLabel',L.chooseEdition);
+    var desc=$('desc');desc.innerHTML='';(book.description||[]).forEach(function(p){desc.appendChild(el('p','',p));});
+    if(book.closingLine)desc.appendChild(el('p','close',book.closingLine));
+    var vw=$('volLinkWrap');vw.innerHTML='';vw.hidden=!(book.volLinkUrl&&book.volLinkText);
+    if(!vw.hidden){var va=el('a','vollink',book.volLinkText);navLink(va,book.volLinkUrl);vw.appendChild(va);}
+    var ex=$('extra');ex.innerHTML='';
+    if(book.included&&book.included.length){ex.appendChild(el('p','h3',book.includedHeading));var ul=el('ul');book.included.forEach(function(i){ul.appendChild(el('li','',i));});ex.appendChild(ul);}
+    if(book.shippingText){ex.appendChild(el('p','h3',book.shippingHeading));ex.appendChild(el('p','',book.shippingText));}
+    renderNote(book.editionsNote);
+    txt('aboutHead',L.aboutHeading||book.aboutHeading||'About this book');
+    var sd=$('shipDetails');sd.hidden=!book.shippingDetails;txt('shipSum',L.shippingDetails);txt('shipText',book.shippingDetails);
+    $('qtyLabel').textContent=L.quantity;$('qMinus').setAttribute('aria-label',L.decrease);$('qPlus').setAttribute('aria-label',L.increase);
+
+    var rg=$('rgrid');rg.innerHTML='';$('bFlags').innerHTML='';
+    $('related').hidden=!(book.related&&book.related.length);
+    if(!$('related').hidden){
+      txt('relHead',L.relatedHeading);$('bFlags').appendChild(flagNodes(book.pendingFlags));
+      book.related.forEach(function(r){var c=el('div','rcard');c.appendChild(el('div','rl',r.label));c.appendChild(el('div','rt',r.title));c.appendChild(el('div','rth',r.theme));
+        if(r.url){var a=el('a','',r.linkText||r.title);navLink(a,r.url);c.appendChild(a);}else c.appendChild(el('span','soon',L.comingSoon));rg.appendChild(c);});
+    }
+
+    var box=$('choices');box.innerHTML='';btns=[];
+    eds.forEach(function(e,i){
+      var b=el('button','row'+(e.soldOut?' soldout':''));b.type='button';b.setAttribute('role','radio');b.dataset.key=e.editionKey;
+      var price=e.price===null?'':money(e.price),st=statusText(e);
+      b.setAttribute('aria-label',[e.label,price,st].filter(Boolean).join(', '));
+      b.appendChild(el('span','dot'));b.lastChild.setAttribute('aria-hidden','true');
+      b.appendChild(el('span','name',e.label));
+      if(e.soldOut)b.appendChild(el('span','tag',L.tagSoldOut));
+      if(price)b.appendChild(el('span','price',price));
+      b.addEventListener('click',function(){pick(e.editionKey,false,true);});
+      b.addEventListener('keydown',function(ev){var k=null,n=eds.length;
+        if(ev.key==='ArrowDown'||ev.key==='ArrowRight')k=(i+1)%n;else if(ev.key==='ArrowUp'||ev.key==='ArrowLeft')k=(i-1+n)%n;else if(ev.key==='Home')k=0;else if(ev.key==='End')k=n-1;
+        if(k!==null){ev.preventDefault();pick(eds[k].editionKey);btns[k].focus();}});
+      box.appendChild(b);btns.push(b);
+    });
+    var multi=eds.length>1;$('chooseLabel').hidden=!multi;box.hidden=!multi;
+    renderListen(!opts.listenOnElsewhere);
+    renderShare();
+    $('notifySlot').hidden=!(book.notifySlot==='notifyMe'&&comingSoon);$('notifyBtn').textContent=L.notifyButton;
+    var want=opts.edition||(current&&current.editionKey)||book.defaultEdition;
+    if(!eds.some(function(e){return e.editionKey===want;}))want=book.defaultEdition;
+    pick(want,true);
+    if(typeof opts.stickyTop==='number'&&isFinite(opts.stickyTop))FOLLOW_TOP=Math.max(0,Math.min(300,opts.stickyTop));
+    followRefresh();
+  }
+
+  // Book note (PP_Books.editionsNote). One plain line = a paragraph (as before). Several lines:
+  //   first plain line = heading; "Label | value | value" = schedule row; "- text" = bullet; other lines = paragraphs.
+  function renderNote(raw){var n=$('note');n.innerHTML='';raw=String(raw||'').replace(/\r/g,'').trim();n.hidden=!raw;if(!raw)return;
+    var ls=raw.split('\n').map(function(x){return x.trim();}).filter(Boolean);
+    if(ls.length===1&&ls[0].indexOf('|')<0){n.textContent=noOrphan(ls[0]);return;}
+    var ul=null,first=true;
+    ls.forEach(function(x){var m=/^[-*\u2022]\s+(.*)$/.exec(x);
+      if(x.indexOf('|')>=0){ul=null;var parts=x.split('|').map(function(y){return y.trim();});var r=el('div','srow');r.appendChild(el('span','sl',parts[0]));
+        var v=el('span','sv');parts.slice(1).filter(Boolean).forEach(function(y){v.appendChild(el('span','',y));});r.appendChild(v);n.appendChild(r);}
+      else if(m){if(!ul){ul=el('ul');n.appendChild(ul);}ul.appendChild(el('li','',m[1]));}
+      else if(first){ul=null;var h=el('p','nh');x.split(/(?<=[.!?])\s+/).forEach(function(t,i){if(i)h.appendChild(document.createTextNode(' '));h.appendChild(el('span','ns',t));});n.appendChild(h);}
+      else{ul=null;n.appendChild(el('p','',x));}
+      first=false;});
+  }
+
+  // ---- image follows the page scroll (desktop embed) ----
+  // The page scrolls, not this frame, so CSS sticky has no effect in the Wix embed. Sentinel strips down the
+  // two-column area report (IntersectionObserver, implicit root = top-level viewport, works cross-origin) where
+  // the visible window starts; the image column is moved down with translateY, never past the options column.
+  var FOLLOW_TOP=24,follow={on:false,io:null,vis:{},y:0,raf:0};
+  function followSetup(){
+    var wrap=$('main'),col=$('photoCol');
+    if(follow.io){follow.io.disconnect();follow.io=null;}
+    [].forEach.call(wrap.querySelectorAll('.sent'),function(x){x.remove();});follow.vis={};
+    var want=inFrame&&!!window.IntersectionObserver&&window.innerWidth>767&&!wrap.hidden;
+    document.documentElement.classList.toggle('follow',want);follow.on=want;
+    if(!want){col.style.transform='';return;}
+    var H=wrap.offsetHeight,STEP=120,th=[];for(var i=0;i<=60;i++)th.push(i/60);
+    follow.io=new IntersectionObserver(function(en){en.forEach(function(e){var k=e.target.dataset.i;
+      if(e.isIntersecting)follow.vis[k]=e.intersectionRect.top-wrap.getBoundingClientRect().top;else delete follow.vis[k];});
+      followApply();},{threshold:th});
+    for(var t=0;t<H;t+=STEP){var d=document.createElement('div');d.className='sent';d.style.top=t+'px';d.style.height=Math.min(STEP,H-t)+'px';d.dataset.i=String(t);d.setAttribute('aria-hidden','true');wrap.appendChild(d);follow.io.observe(d);}
+  }
+  function followApply(){
+    if(!follow.on)return;var col=$('photoCol'),info=$('info'),wrap=$('main');
+    var ks=Object.keys(follow.vis),base=col.offsetTop,maxY=Math.max(0,info.offsetTop+info.offsetHeight-col.offsetHeight-base);
+    var y;
+    if(ks.length){var top=Math.min.apply(null,ks.map(function(k){return follow.vis[k];}));y=top+FOLLOW_TOP-base;}
+    else{y=follow.y;} // wrap out of view: keep the last position
+    y=Math.round(Math.max(0,Math.min(maxY,y)));
+    if(y!==follow.y){follow.y=y;col.style.transform=y?'translateY('+y+'px)':'';}
+  }
+  var followT=0;function followRefresh(){clearTimeout(followT);followT=setTimeout(function(){followSetup();},120);}
+  window.addEventListener('resize',followRefresh);
+
+  // ---- listening section (samples, companion song, Listen On) ----
+  // Book-level fallbacks until these optional PP_Books fields exist (book.* wins when present).
+  var BOOK_DEFAULTS={'lomh-vol1':{
+    samplesTagline:'Let the words linger. You may hear something of your own heart.',
+    sampleThumbs:{'My Prophetic Dream':'https://static.wixstatic.com/media/d66f78_65920d9ecfe848f9bf520599d9c1046d~mv2.webp/v1/fill/w_140,h_140,al_c,q_90,enc_auto/d66f78_65920d9ecfe848f9bf520599d9c1046d~mv2.webp',
+      'My Calling':'https://static.wixstatic.com/media/d66f78_11743619b9c4430c8dda649b8cc4cb06~mv2.webp/v1/fill/w_140,h_140,al_c,q_90,enc_auto/d66f78_11743619b9c4430c8dda649b8cc4cb06~mv2.webp'},
+    songArtist:'',
+    songAudioUrl:'https://static.wixstatic.com/mp3/d66f78_8f0228643f8a4d89a8cfbc4a730bb336.mp3',songDurationSec:229,
+    songBuyUrl:'/product-page/letters-to-the-one-i-ve-yet-to-find',songBuyLabel:'Buy $2.99'}};
+  BOOK_DEFAULTS['lomh-set6']=BOOK_DEFAULTS['lomh-vol1'];
+  function bk(k){var v=book[k];if(v!==undefined&&v!==null&&v!=='')return v;var d=BOOK_DEFAULTS[book.bookId]||{};return d[k];}
+  var ICON='<svg class="ipl" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4.5v15l13-7.5z"/></svg><svg class="ip" viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="4.5" width="4.2" height="15"/><rect x="13.8" y="4.5" width="4.2" height="15"/></svg>';
+  function secs(d){if(typeof d==='number')return d;var m=/^(\d+):(\d{1,2})$/.exec(String(d||''));return m?(+m[1])*60+(+m[2]):0;}
+  function mmss(t){t=Math.max(0,Math.floor(t||0));var m=Math.floor(t/60),x=t%60;return (m<10?'0':'')+m+':'+(x<10?'0':'')+x;}
+  // One custom player: play/pause (44px), seek bar, "00:00 / 03:49". Only one audio plays at a time on the page.
+  function player(host,box,src,title,dur){
+    // Same file, same ETag: music.wixstatic.com mp3s fail to load in headless Chrome here (ERR_BLOCKED_BY_ORB); static.wixstatic.com plays.
+    src=String(src||'').replace(/^https?:\/\/music\.wixstatic\.com\/mp3\//,'https://static.wixstatic.com/mp3/');
+    var a=document.createElement('audio');a.preload='none';a.src=src;a.setAttribute('controlsList','nodownload');a.hidden=true;
+    var b=document.createElement('button');b.type='button';b.className='pbtn';b.innerHTML=ICON;b.setAttribute('aria-label',(L.play||'Play')+' '+title);
+    var sk=document.createElement('input');sk.type='range';sk.className='seek';sk.min='0';sk.step='0.1';sk.value='0';sk.max=String(dur||0);sk.setAttribute('aria-label','Seek, '+title);
+    var tm=el('span','tm');var drag=false;
+    function total(){return (isFinite(a.duration)&&a.duration>0)?a.duration:(dur||0);}
+    function paint(t){var d=total();sk.max=String(d);if(!drag)sk.value=String(t);sk.style.setProperty('--p',(d?t/d*100:0)+'%');tm.textContent=mmss(t)+' / '+mmss(d);}
+    b.addEventListener('click',function(){if(a.paused){var pr=a.play();if(pr&&pr.catch)pr.catch(function(){});}else a.pause();});
+    sk.addEventListener('input',function(){drag=true;paint(+sk.value);});
+    sk.addEventListener('change',function(){drag=false;try{a.currentTime=+sk.value;}catch(e){}paint(+sk.value);});
+    a.addEventListener('play',function(){[].forEach.call(document.querySelectorAll('audio'),function(o){if(o!==a&&!o.paused)o.pause();});box.classList.add('playing');b.setAttribute('aria-label',(L.pause||'Pause')+' '+title);});
+    a.addEventListener('pause',function(){box.classList.remove('playing');b.setAttribute('aria-label',(L.play||'Play')+' '+title);});
+    a.addEventListener('ended',function(){a.currentTime=0;paint(0);});
+    a.addEventListener('timeupdate',function(){paint(a.currentTime);});a.addEventListener('loadedmetadata',function(){paint(a.currentTime);});
+    host.appendChild(b);host.appendChild(sk);host.appendChild(tm);host.appendChild(a);paint(0);
+  }
+  function renderListen(withLinks){
+    var sm=book.samples||[],box=$('samples');box.innerHTML='';
+    $('samplesPart').hidden=!sm.length||part==='listenOn';
+    txt('samplesHead',book.samplesHeading);$('samplesHead').hidden=!book.samplesHeading;txt('samplesIntro',book.samplesIntro);$('samplesIntro').hidden=!book.samplesIntro;
+    var tg=bk('samplesTagline');txt('samplesTag',tg||'');$('samplesTag').hidden=!tg;
+    var thumbs=bk('sampleThumbs')||{};
+    sm.forEach(function(s){var c=el('div','sample');
+      var th=s.thumbUrl||thumbs[s.title];var im=el('img','sth');im.alt='';im.setAttribute('aria-hidden','true');if(th)im.src=th;else im.style.visibility='hidden';c.appendChild(im);
+      var pc=el('div','pc');var t=el('p','st');t.appendChild(document.createTextNode(s.title));if(s.artist){var sa=el('span','sa');var sd=el('span','sd');sd.textContent='\u00a0 - \u00a0';sa.appendChild(sd);sa.appendChild(document.createTextNode(keepDates(s.artist).replace(/ /g,'\u00a0')));t.appendChild(sa);}pc.appendChild(t);
+      var ctl=el('div','ctl');pc.appendChild(ctl);c.appendChild(pc);player(ctl,c,s.audioUrl,s.title,secs(s.duration));
+      if(s.readAlongLightbox){var r=el('button','ra',s.readAlongLabel||L.readAlong);r.type='button';r.setAttribute('aria-haspopup','dialog');r.setAttribute('aria-label',(s.readAlongLabel||L.readAlong)+', '+s.title);r.addEventListener('click',function(){send({type:'openReadAlong',name:s.readAlongLightbox});});c.appendChild(r);}
+      box.appendChild(c);});
+    var songOn=!!(book.songTitle||book.songLine)&&part!=='listenOn';
+    $('songPart').hidden=!songOn;txt('songHead',book.songHeading);$('songHead').hidden=!book.songHeading;txt('songTitle',book.songTitle);txt('songLine',book.songLine);$('songLine').hidden=!book.songLine;
+    (function(){var sl=$('songLine'),t=sl.textContent,i=t.indexOf('collaboration');if(i<0)return;sl.textContent='';sl.appendChild(document.createTextNode(t.slice(0,i)));var a=document.createElement('a');a.href='https://www.lettersofmyheart.com/contact';a.target='_top';a.textContent='collaboration';sl.appendChild(a);sl.appendChild(document.createTextNode(t.slice(i+13)));})(); // v14: 'collaboration' links to the contact page
+    $('songArt').hidden=!book.songArtUrl;if(book.songArtUrl){$('songArt').src=book.songArtUrl;$('songArt').alt=book.songArtAlt||'';}
+    var art=bk('songArtist');txt('songArtist',art||'');$('songArtist').hidden=!art;
+    var sc=$('songCtl');sc.innerHTML='';var au=bk('songAudioUrl');sc.hidden=!au;if(songOn&&au)player(sc,$('pbar'),au,book.songTitle||'',secs(bk('songDurationSec')));
+    var bu=bk('songBuyUrl'),bl=bk('songBuyLabel'),ba=$('songBuy');ba.hidden=!(bu&&bl&&/^\/[^\/]/.test(bu));
+    if(!ba.hidden){ba.textContent=bl;ba.href=(S.siteUrl||'https://www.lettersofmyheart.com')+bu;ba.target='_top';ba.onclick=function(ev){if(inFrame){ev.preventDefault();send({type:'navigate',url:bu});}};}
+    $('songTbd').hidden=!(test&&book.songPlayer==='wixMusic');$('songTbd').textContent='Draft note: the Wix Music player sits under this frame in the Editor.';
+    var ln=book.streamingLinks||[],sl=$('slinks');sl.innerHTML='';
+    $('streamPart').hidden=!(withLinks&&ln.length);txt('streamHead',book.streamingHeading);$('streamHead').hidden=!book.streamingHeading;
+    var pre=(L.listenOnPrefix!==undefined?L.listenOnPrefix:(book.streamingHeading||'Listen On'));
+    ln.forEach(function(x){var a=el('a','slink',(pre?pre+' ':'')+x.label);a.href=x.url;a.target='_blank';a.rel='noopener';sl.appendChild(a);});
+    var any=!$('samplesPart').hidden||!$('songPart').hidden||!$('streamPart').hidden;$('listen').hidden=!any;
+    if(part==='listenOn'){$('streamPart').style.borderTop='0';$('streamPart').style.marginTop='0';}
+    var jw=$('samplesJumpWrap');jw.hidden=!(sm.length&&book.samplesButtonLabel&&part!=='listenOn');$('samplesJump').textContent=book.samplesButtonLabel||'';
+  }
+  $('samplesJump').addEventListener('click',function(ev){ev.preventDefault();var t=$('listen');
+    visibleWindow(function(v){var top=t.getBoundingClientRect().top;if(v){send({type:'scrollBy',px:Math.round(top-v.top-16)});}else if(!inFrame){t.scrollIntoView({behavior:'smooth'});}});
+    var h=$('samplesHead');setTimeout(function(){h.tabIndex=-1;try{h.focus({preventScroll:true});}catch(e){}},400);});
+
+  // ---- share (2026-11-01: Facebook, X, Pinterest, Email, Copy link; native sheet on touch) ----
+  var SHARE_FALLBACK='https://www.lettersofmyheart.com/book-test-vol1';
+  function shareUrl(){var u='';
+    try{var t=window.top.location;if(t&&/^https?:$/.test(t.protocol))u=t.origin+t.pathname;}catch(e){} // cross-origin: not readable
+    return u||P.pageUrl||SHARE_FALLBACK;}
+  function shareText(){return book.shareText||book.title||'';}
+  var touch=window.matchMedia&&matchMedia('(pointer:coarse)').matches;
+  function renderShare(){var url=shareUrl(),text=shareText(),e=encodeURIComponent;
+    $('share').hidden=false;txt('shareHead',L.share||'Share');
+    $('shareBtn').hidden=!(touch&&navigator.share);$('shareBtnTxt').textContent=L.share||'Share';
+    $('shFb').href='https://www.facebook.com/sharer/sharer.php?u='+e(url);
+    $('shX').href='https://twitter.com/intent/tweet?text='+e(text)+'&url='+e(url);
+    var img=$('photo')&&$('photo').getAttribute('src')||'';
+    $('shPin').href='https://www.pinterest.com/pin/create/button/?url='+e(url)+(img&&/^https:/.test(img)?'&media='+e(img):'')+'&description='+e(text);
+    $('shMail').href='mailto:?subject='+e(book.title||'')+'&body='+e(text+'\n\n'+url);
+    $('shFb').setAttribute('aria-label','Share on Facebook (opens in a new tab)');$('shX').setAttribute('aria-label','Share on X (opens in a new tab)');
+    $('shPin').setAttribute('aria-label','Save to Pinterest (opens in a new tab)');$('shMail').setAttribute('aria-label','Share by email');
+    $('shareUrl').hidden=true;$('shareMsg').textContent='';}
+  // Pinterest picks up the current edition image at tap time.
+  $('shPin').addEventListener('click',function(){renderShare();});
+  function showCopyFallback(){var i=$('shareUrl');i.value=shareUrl();i.hidden=false;i.focus();i.select();$('shareMsg').textContent=L.copyFallback||'Press and hold to copy the link.';postHeight();}
+  var copyTimer=0;
+  function copied(){var t=$('shCopyTxt');t.textContent='Copied!';$('shCopy').classList.add('done');$('shareMsg').textContent=L.copied||'';
+    clearTimeout(copyTimer);copyTimer=setTimeout(function(){t.textContent='Copy link';$('shCopy').classList.remove('done');$('shareMsg').textContent='';},2000);}
+  function execCopy(url){try{var ta=document.createElement('textarea');ta.value=url;ta.setAttribute('readonly','');ta.style.position='fixed';ta.style.top='0';ta.style.left='-9999px';ta.style.opacity='0';
+    document.body.appendChild(ta);ta.select();ta.setSelectionRange(0,url.length);var ok=document.execCommand('copy');document.body.removeChild(ta);return ok;}catch(e){return false;}}
+  // Wix iframes block the Clipboard API, so inside Wix the page code copies (wixWindowFrontend.copyToClipboard)
+  // and tells us if it worked. "Copied!" shows only on a real success; otherwise the link box appears.
+  var copyWait=0;
+  function copyLocal(url){
+    function fb(){if(!inFrame&&execCopy(url))copied();else showCopyFallback();}
+    try{if(!inFrame&&navigator.clipboard&&navigator.clipboard.writeText&&window.isSecureContext){navigator.clipboard.writeText(url).then(copied,fb);return;}}catch(e){}
+    fb();}
+  function copyLink(){var url=shareUrl();
+    if(inFrame){clearTimeout(copyWait);copyWait=setTimeout(function(){copyWait=0;showCopyFallback();},1500);send({type:'copyLink',url:url});return;}
+    copyLocal(url);}
+  function onCopyResult(d){if(!copyWait)return;clearTimeout(copyWait);copyWait=0;if(d&&d.ok)copied();else showCopyFallback();}
+  $('shCopy').addEventListener('click',copyLink);
+  $('shareBtn').addEventListener('click',function(){var url=shareUrl();
+    if(navigator.share){navigator.share({title:book.title,text:shareText(),url:url}).catch(function(e){if(!e||e.name!=='AbortError')copyLink();});return;}
+    copyLink();});
+  $('notifyBtn').addEventListener('click',function(){send({type:'openNotify',bookId:book.bookId});});
+
+  // ---- edition details ----
+  var sIn=$('signInput');
+  function setPhoto(img,now){var p=$('photo');if(!img){return;}if(p.getAttribute('src')===img.url){p.alt=img.alt;return;}
+    if(now){p.src=img.url;p.alt=img.alt;return;}p.style.opacity=0;setTimeout(function(){p.src=img.url;p.alt=img.alt;p.style.opacity=1;},180);}
+  function buttonState(e){
+    var s=e.stage,dt=s.destinationType;
+    if(comingSoon)return {label:L.comingSoonButton,dead:true,hidden:book.comingSoonButtons==='hidden'};
+    if(e.soldOut)return {label:L.tagSoldOut,dead:true};
+    if(dt==='wixCart')return {label:s.buttonLabel,dead:!e.purchasable};
+    if(dt==='external'&&!isTbd(s.url))return {label:s.buttonLabel,dead:false,href:s.url};
+    if(dt==='external')return {label:L.comingSoon,dead:true};
+    return {label:s.buttonLabel,dead:true};
+  }
+  function qtyShown(e){return !comingSoon&&!e.soldOut&&e.stage.destinationType==='wixCart'&&e.purchasable;}
+  function maxQ(e){return Math.max(1,e.maxQty||10);}
+  function setQty(n,e,said){e=e||current;var m=maxQ(e);n=Math.floor(Number(n));if(!isFinite(n)||n<1)n=1;var capped=n>m;if(capped)n=m;qty=n;
+    $('qInput').value=String(n);$('qInput').max=String(m);$('qMinus').disabled=n<=1;$('qPlus').disabled=n>=m;$('qMsg').textContent=(capped&&said)?noOrphan(L.maxReached):'';}
+  $('qMinus').addEventListener('click',function(){setQty(qty-1,null,true);});
+  $('qPlus').addEventListener('click',function(){if(qty>=maxQ(current)){$('qMsg').textContent=noOrphan(L.maxReached);return;}setQty(qty+1,null,true);});
+  $('qInput').addEventListener('change',function(){setQty(this.value,null,true);});
+  function keepInView(){ // phone: scroll just enough to show the details and the button
+    if(window.innerWidth>767&&inFrame)return;
+    var t=$('eName').getBoundingClientRect().top,b=$('buyBtn').getBoundingClientRect().bottom;
+    visibleWindow(function(v){if(!v)return;var need=b+16-v.bottom;if(need<=0)return;var room=t-8-v.top;var px=Math.min(need,Math.max(0,room));if(px>0)send({type:'scrollBy',px:Math.round(px)});});
+  }
+  function pick(key,first,byTap){
+    var e=eds.find(function(x){return x.editionKey===key;})||eds[0];if(!e)return;var s=e.stage;current=e;
+    btns.forEach(function(b){var on=b.dataset.key===e.editionKey;b.setAttribute('aria-checked',on?'true':'false');b.tabIndex=on?0:-1;});
+    setPhoto(e.images[0],first);
+    var et=$('eThumb');if(e.images[0]){et.src=e.images[0].url;et.hidden=false;}else et.hidden=true;
+    var th=$('thumbs');th.innerHTML='';if(e.images.length>1)e.images.forEach(function(im){var t=el('img');t.src=im.url;t.alt=im.alt;t.onclick=function(){setPhoto(im);};th.appendChild(t);});
+    txt('eName',e.label);$('eHead').hidden=!e.label;
+    var fl=$('eFlags');fl.innerHTML='';fl.appendChild(flagNodes(e.pendingFlags));fl.hidden=!fl.childNodes.length;
+    $('ePrice').textContent=e.price===null?(e.priceHidden?'':L.priceTbd):money(e.price);$('ePrice').hidden=e.price===null&&e.priceHidden;
+    txt('ePriceNote',s.priceNote);txt('eDesc',e.description);$('eDesc').hidden=!e.description;$('ePriceRow').hidden=$('ePrice').hidden&&!s.priceNote;
+    // Per-edition shipping lines only when the book has no shared note (the note replaces them).
+    var showShip=!!e.shippingNote;$('eShip').hidden=!showShip;txt('eShip',showShip?e.shippingNote:'');
+    var st=e.signTo;$('sign').hidden=!st;
+    if(st){txt('signLabel',st.label);sIn.placeholder=st.placeholder;sIn.maxLength=st.maxChars;sIn.required=!!st.required;txt('signReq',st.required?L.required:L.optional);if(sIn.value.length>st.maxChars)sIn.value=sIn.value.slice(0,st.maxChars);count();}
+    $('qty').hidden=!qtyShown(e);setQty(qty,e,false); // quantity carries over, clamped to this edition's max
+    var bs=buttonState(e),b=$('buyBtn');b.textContent=bs.label;b.setAttribute('aria-disabled',bs.dead?'true':'false');b.hidden=!!bs.hidden;$('buyWrap').hidden=!!bs.hidden&&!s.hint;$('edition').classList.toggle('notifyOnly',comingSoon&&$('buyWrap').hidden&&!eds.some(function(x){return x.purchasable;}));
+    if(bs.href){b.href=bs.href;b.target='_blank';b.rel='noopener';}else{b.removeAttribute('target');b.removeAttribute('rel');b.href='#';}
+    if(bs.dead)b.removeAttribute('href');
+    b.dataset.state=comingSoon?'comingSoon':(s.destinationType+(bs.dead?'-disabled':''));
+    setNotice('');
+    var showTbd=test&&!comingSoon&&s.destinationType!=='wixCart'&&isTbd(s.url)&&!!s.url;
+    $('tbd').hidden=!showTbd;$('tbd').textContent='Draft note: link '+(s.url||'TBD');
+    txt('hint',s.hint);$('hint').hidden=!s.hint;
+    if(!first)send({type:'editionChanged',editionKey:e.editionKey});
+    if(byTap)setTimeout(keepInView,60);
+    setTimeout(postHeight,250);
+  }
+  function setNotice(m,err){var n=$('notice');n.textContent=noOrphan(m||'');n.className='notice'+(err?' err':'');}
+  function count(){var st=current&&current.signTo;if(!st)return;$('signCount').textContent=(st.maxChars-sIn.value.length)+' '+L.charsLeft;}
+  sIn.addEventListener('input',count);
+  $('buyBtn').addEventListener('click',function(ev){
+    if(!current)return;var s=current.stage;
+    if(this.getAttribute('aria-disabled')==='true'){ev.preventDefault();return;}
+    if(s.destinationType!=='wixCart')return; // a real external link opens by itself; quantity is not used
+    ev.preventDefault();if(busy)return;
+    var text=current.signTo?sIn.value.trim():'';
+    if(current.signTo&&current.signTo.required&&!text){setNotice(L.signRequiredError,true);sIn.focus();return;}
+    if(!inFrame){setNotice('Local test: would add '+qty+' \u00d7 '+current.editionKey+' to the Wix cart.');return;}
+    busy=true;var b=$('buyBtn');b.setAttribute('aria-disabled','true');b.textContent=L.adding||'Adding\u2026';setNotice('');
+    send({type:'addToCart',editionKey:current.editionKey,signToText:text,quantity:qty});
+    clearTimeout(window.__ppT);window.__ppT=setTimeout(function(){if(busy)onCartResult({ok:false,message:L.cartError});},20000);
+  });
+  function onCartResult(r){
+    busy=false;var e=current;if(!e)return;var bs=buttonState(e),b=$('buyBtn');b.textContent=bs.label;b.setAttribute('aria-disabled',bs.dead?'true':'false');
+    if(r&&r.ok){setNotice('');}else setNotice((r&&r.message)||L.cartError,true);
+    postHeight();
+  }
+
+  window.addEventListener('message',function(ev){
+    var d=ev.data;if(!d||typeof d!=='object'||d.source!==NS)return;
+    if(inFrame&&ev.source!==window.parent)return;
+    if(d.type==='payload'&&d.payload&&d.payload.ok&&d.payload.book&&Array.isArray(d.payload.editions))render(d.payload,{edition:d.edition,part:d.part,listenOnElsewhere:!!d.listenOnElsewhere,stickyTop:d.stickyTop});
+    else if(d.type==='payload'&&d.payload&&!d.payload.ok){$('loading').textContent=d.payload.message||'';$('loading').hidden=false;postHeight();}
+    else if(d.type==='cartResult')onCartResult(d);
+    else if(d.type==='copyResult')onCopyResult(d);
+  });
+  if(window.ResizeObserver)new ResizeObserver(function(){postHeight();if(P&&part==='main')followRefresh();}).observe(document.body);
+  window.addEventListener('load',postHeight);
+  window.__pp={keepDates:keepDates,get qty(){return qty;}};
+  send({type:'ready'});
+})();
+</script>
+</body>
+</html>
