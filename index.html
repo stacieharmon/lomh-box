@@ -341,6 +341,14 @@ html,body{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 .vnav.vbot{padding:0 32px 28px}.vnav.vbot .vrow{border-bottom:0;border-top:1px solid #C9A55A;padding:6px 0 0}/* v18: bottom nav */
 @media (max-width:767px){.vnav{padding:10px 18px 0}.vnav .vrow{padding-bottom:2px}.vnav.vbot{padding:0 18px 22px}.vnav.vbot .vrow{padding:2px 0 0}}
 @media (max-width:599px){.vnav .vrow{display:flex;justify-content:center;gap:0 24px}.vnav .vl{display:none}.vnav .vs{display:inline}.vnav .vrow>span:empty{display:none}}
+/* v20 2026-11-11 (Stacie): Peek Inside button on its own just below the image card, outside the beige border.
+   It moves with the card on desktop. Shown only when the page code says the Peek Inside lightbox is wired (payload message peekInside:true). */
+.peek{position:absolute;left:50%;top:calc(100% + 16px);transform:translateX(-50%);width:min(300px,100%);min-height:46px;display:flex;align-items:center;justify-content:center;padding:0 16px;background:#6B3F1D;color:#F6EFE4;border:1px solid #6B3F1D;border-radius:8px;font-family:'Cinzel',Georgia,serif;font-weight:700;font-size:13px;line-height:1.2;letter-spacing:.12em;text-transform:uppercase;white-space:nowrap;cursor:pointer;transition:background .2s,border-color .2s}
+@media (hover:hover){.peek:hover{background:#4A2E1B;border-color:#4A2E1B}}
+.peek:active{background:#4A2E1B;border-color:#4A2E1B}
+.peek:focus-visible{outline:2px solid var(--selected);outline-offset:3px}
+html.hasPeek .photo{margin-bottom:62px}
+@media (max-width:767px){html.hasPeek .photo{position:relative;top:0;margin-bottom:58px}.peek{top:calc(100% + 14px);width:272px;max-width:calc(100vw - 36px);min-height:44px}}
 </style>
 </head>
 <body>
@@ -349,7 +357,7 @@ html,body{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 <nav class="vnav" id="vnav" aria-label="Volumes" hidden><div class="vrow"><span class="vp" id="vnPrev"></span><span class="vh" id="vnHome"></span><span class="vx" id="vnNext"></span></div></nav>
 <div class="topline" id="topline" hidden><p class="date" id="date"></p></div>
 <main class="wrap" id="main" hidden>
-  <div class="photo" id="photoCol"><div class="frame"><img id="photo" src="" alt="" width="1000" height="1000"></div><div class="thumbs" id="thumbs"></div></div>
+  <div class="photo" id="photoCol"><div class="frame"><img id="photo" src="" alt="" width="1000" height="1000"></div><div class="thumbs" id="thumbs"></div><button type="button" class="peek" id="peekBtn" aria-haspopup="dialog" hidden>Peek Inside</button></div>
   <div class="info" id="info">
     <p class="eb" id="eyebrow"></p>
     <h1 id="title"></h1>
@@ -496,6 +504,8 @@ html,body{-webkit-text-size-adjust:100%;text-size-adjust:100%}
     }
     $('draft').hidden=!test;$('draft').textContent=S.draftBannerText||'';
     $('main').hidden=false;
+    var peekOn=!!opts.peekInside;$('peekBtn').hidden=!peekOn;document.documentElement.classList.toggle('hasPeek',peekOn); // v20
+    if(peekOn&&!$('peekFont')){var pf=document.createElement('link');pf.id='peekFont';pf.rel='stylesheet';pf.href='https://fonts.googleapis.com/css2?family=Cinzel:wght@700&display=swap';document.head.appendChild(pf);} // Cinzel bold, as on the site buttons
     txt('date',book.releaseText);$('topline').hidden=!book.releaseText;
     txt('eyebrow',book.eyebrow);txt('title',book.title);txt('hook',book.hook);txt('chooseLabel',L.chooseEdition);
     var desc=$('desc');desc.innerHTML='';(book.description||[]).forEach(function(p){desc.appendChild(el('p','',p));});
@@ -579,7 +589,7 @@ html,body{-webkit-text-size-adjust:100%;text-size-adjust:100%}
   }
   function followApply(){
     if(!follow.on)return;var col=$('photoCol'),info=$('info'),wrap=$('main');
-    var ks=Object.keys(follow.vis),base=col.offsetTop,maxY=Math.max(0,info.offsetTop+info.offsetHeight-col.offsetHeight-base);
+    var ks=Object.keys(follow.vis),base=col.offsetTop,pk=$('peekBtn'),pkX=pk.hidden?0:Math.max(0,pk.offsetTop+pk.offsetHeight-col.offsetHeight),maxY=Math.max(0,info.offsetTop+info.offsetHeight-col.offsetHeight-pkX-base);
     var y;
     if(ks.length){var top=Math.min.apply(null,ks.map(function(k){return follow.vis[k];}));y=top+FOLLOW_TOP-base;}
     else{y=follow.y;} // wrap out of view: keep the last position
@@ -697,6 +707,7 @@ html,body{-webkit-text-size-adjust:100%;text-size-adjust:100%}
     if(navigator.share){navigator.share({title:book.title,text:shareText(),url:url}).catch(function(e){if(!e||e.name!=='AbortError')copyLink();});return;}
     copyLink();});
   $('notifyBtn').addEventListener('click',function(){send({type:'openNotify',bookId:book.bookId});});
+  $('peekBtn').addEventListener('click',function(){send({type:'openPeekInside',bookId:book&&book.bookId});}); // v20
 
   // ---- edition details ----
   var sIn=$('signInput');
@@ -774,7 +785,7 @@ html,body{-webkit-text-size-adjust:100%;text-size-adjust:100%}
   window.addEventListener('message',function(ev){
     var d=ev.data;if(!d||typeof d!=='object'||d.source!==NS)return;
     if(inFrame&&ev.source!==window.parent)return;
-    if(d.type==='payload'&&d.payload&&d.payload.ok&&d.payload.book&&Array.isArray(d.payload.editions))render(d.payload,{edition:d.edition,part:d.part,listenOnElsewhere:!!d.listenOnElsewhere,stickyTop:d.stickyTop});
+    if(d.type==='payload'&&d.payload&&d.payload.ok&&d.payload.book&&Array.isArray(d.payload.editions))render(d.payload,{edition:d.edition,part:d.part,listenOnElsewhere:!!d.listenOnElsewhere,stickyTop:d.stickyTop,peekInside:!!d.peekInside});
     else if(d.type==='payload'&&d.payload&&!d.payload.ok){$('loading').textContent=d.payload.message||'';$('loading').hidden=false;postHeight();}
     else if(d.type==='cartResult')onCartResult(d);
     else if(d.type==='copyResult')onCopyResult(d);
